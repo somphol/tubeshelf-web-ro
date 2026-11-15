@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://somphol.github.io/tubeshelf-web-ro/format.schema.json",
   "title": "TubeShelf backup (viewer contract)",
-  "description": "Documentation of what the web viewer accepts. The Mac app owns the format; this file must be updated with it.",
+  "description": "What the web viewer accepts. The Mac app owns the format; fields are additive and the version stays 1 while older readers can ignore what they do not know.",
   "oneOf": [
     { "$ref": "#/$defs/envelope" },
     { "$ref": "#/$defs/library" }
@@ -15,7 +15,11 @@
         "format": { "const": "tubeshelf.backup" },
         "version": { "type": "integer", "minimum": 1, "maximum": 1 },
         "exportedAt": { "type": "string", "format": "date-time" },
-        "library": { "$ref": "#/$defs/library" }
+        "library": { "$ref": "#/$defs/library" },
+        "playlists": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/playlist" }
+        }
       }
     },
     "library": {
@@ -48,7 +52,49 @@
         "note": { "type": "string" },
         "addedAt": { "type": "string", "format": "date-time" },
         "durationSeconds": { "type": "integer", "minimum": 0 },
-        "isFavorite": { "type": "boolean" }
+        "isFavorite": { "type": "boolean" },
+        "watchStatus": {
+          "type": "string",
+          "enum": ["unwatched", "watching", "done"],
+          "default": "unwatched"
+        }
+      }
+    },
+    "playlist": {
+      "type": "object",
+      "description": "A course. Chapters are stored in order; the shelf is not required to contain them.",
+      "required": ["id", "title", "items"],
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "channel": { "type": "string" },
+        "items": {
+          "type": "array",
+          "maxItems": 500,
+          "items": { "$ref": "#/$defs/playlistItem" }
+        },
+        "addedAt": { "type": "string", "format": "date-time" },
+        "fetchedAt": { "type": "string", "format": "date-time" },
+        "watchedItemIDs": {
+          "type": "array",
+          "description": "Per-course progress. Independent of the shelf's watchStatus.",
+          "items": { "type": "string" }
+        },
+        "isTruncated": { "type": "boolean" },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "playlistItem": {
+      "type": "object",
+      "required": ["videoID", "title"],
+      "properties": {
+        "videoID": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{11}$"
+        },
+        "title": { "type": "string" },
+        "channel": { "type": "string" },
+        "durationSeconds": { "type": "integer", "minimum": 0 }
       }
     }
   }

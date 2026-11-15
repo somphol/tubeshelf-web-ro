@@ -6,7 +6,8 @@ categories, channels, search, and the slide deck.
 The file you choose is parsed in your browser. It is never uploaded, and reloading
 the page forgets it.
 
-> **Status: planning.** No implementation yet. `PLAN.md` is the build contract,
+> **Status: planning.** No implementation yet. The contract now covers watch
+> state and the playlist catalog, not just videos. `PLAN.md` is the build contract,
 > `AGENTS.md` is the handoff, `format.schema.json` is the accepted file format.
 
 - Plan: [PLAN.md](PLAN.md)

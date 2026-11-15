@@ -58,6 +58,12 @@ The viewer accepts two shapes.
 object without the envelope. Users copy this out of Application Support, so it must
 keep working.
 
+**C. Playlist catalog (optional).** The envelope may carry
+`playlists: [{ id, title, channel, items: [{ videoID, title, channel, durationSeconds }],
+watchedItemIDs, tags, isTruncated, addedAt, fetchedAt }]`. Treat it as absent when
+missing: a viewer that ignores it still shows every video. Fields are additive, so
+`version` stays 1.
+
 `format.schema.json` in this repo is the machine-readable version of the above.
 
 ### Validation rules (exact)
@@ -77,6 +83,7 @@ keep working.
    - `title` missing → "Untitled"; `channel` missing → "".
    - `tags`: trim, drop empties, de-duplicate case-insensitively, keep first spelling.
    - `isFavorite` defaults false; `durationSeconds` defaults absent; `note` defaults "".
+   - `watchStatus` is `unwatched | watching | done`; missing means `unwatched`.
 5. Cap at **50,000 videos**; report the cap rather than freezing.
 6. Unknown fields are ignored, never rejected — the format will grow.
 7. Empty `videos` array is valid but shows the empty-state explanation
@@ -122,7 +129,7 @@ Desktop (≥ 900 px): two columns.
 - **Search**: one field, scope switch **Titles** / **Everything** (title, channel,
   note, tags). Every term must match; case and diacritics folded.
 
-Deck (overlay, same as the app):
+Deck (overlay, same as the app). It carries two slide types — a video and a course:
 
 - Dark backdrop using the current thumbnail, blurred.
 - Slide `N / M`, title, channel (click → filter), duration, saved date, tags,
@@ -131,7 +138,8 @@ Deck (overlay, same as the app):
   iframe; on load failure, revert and point at YouTube.
 - Filmstrip shows **±20 slides around the current one** (never all of them), with
   the current one highlighted and scrolled into view.
-- Keyboard: ← → move, Esc closes, Home/End first/last.
+- Keyboard: ← → move, Home/End first/last, Esc closes. A mouse wheel/trackpad
+  swipe moves too (wheel notches are small; use a low threshold).
 - Return to the shelf keeps the active filter and page.
 
 Narrow (< 760 px, iPad/phone):
@@ -190,6 +198,9 @@ retry), valid but empty, and no search results (with the scope hint when in Titl
       `youtube-nocookie.com` after pressing play.
 - [ ] Keyboard: ← → Esc in the deck; ⌥← / ⌥→ pages; Esc closes the deck, not the page.
 - [ ] 390 px wide: no horizontal scrolling, deck readable, chips scroll.
+- [ ] A backup with `playlists` shows course cards; a course opens its ordered
+      chapter list and a course slide presents as a poster.
+- [ ] A missing `playlists` key still loads every video.
 - [ ] Reload leaves no trace of the file (no storage, no cached network request).
 - [ ] `https://somphol.github.io/tubeshelf-web-ro/` serves the demo.
 
