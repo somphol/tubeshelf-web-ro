@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { decodeBackup, BackupError } from "../src/format.js";
+import { decodeBackup, BackupError, thumbnailCandidates } from "../src/format.js";
 
 const envelope = {
   format: "tubeshelf.backup",
@@ -113,4 +113,12 @@ test("an old envelope without playlists still decodes", () => {
   const result = decodeBackup(JSON.stringify(old));
   assert.deepEqual(result.playlists, []);
   assert.equal(result.videos.length, 1);
+});
+
+test("thumbnailCandidates honours a reduced quality ladder", () => {
+  assert.equal(thumbnailCandidates("dQw4w9WgXcQ").length, 4);
+  assert.deepEqual(
+    thumbnailCandidates("dQw4w9WgXcQ", ["hqdefault", "mqdefault"]).map((url) => url.split("/").pop()),
+    ["hqdefault.jpg", "mqdefault.jpg"]
+  );
 });

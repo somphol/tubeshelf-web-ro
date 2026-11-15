@@ -164,10 +164,10 @@ export function playlistURL(playlistID) {
   return `https://www.youtube.com/playlist?list=${playlistID}`;
 }
 
-const THUMB_QUALITIES = ["maxresdefault", "sddefault", "hqdefault", "mqdefault"];
+export const THUMBNAIL_QUALITIES = ["maxresdefault", "sddefault", "hqdefault", "mqdefault"];
 
-export function thumbnailCandidates(videoID) {
-  return THUMB_QUALITIES.map((quality) => `https://i.ytimg.com/vi/${videoID}/${quality}.jpg`);
+export function thumbnailCandidates(videoID, qualities = THUMBNAIL_QUALITIES) {
+  return qualities.map((quality) => `https://i.ytimg.com/vi/${videoID}/${quality}.jpg`);
 }
 
 export function formatDuration(seconds) {

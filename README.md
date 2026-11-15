@@ -39,10 +39,11 @@ Choose a backup with the button, or drop the `.json` anywhere on the page.
   with a 404 plus a decodable 120×90 grey image. Quality fallback then chapter
   fallback for course covers; cards that exhaust every source show *No artwork —
   click to retry*, and a **Fix N thumbnail(s)** button appears in the header.
-  Retries bypass cached 404s with a fresh query string.
+  Retries re-request only the failed IDs, with a fresh query string.
 
 ## Privacy
 
 This repository is public and contains no shelves. The demo is seven public YouTube
 videos. The viewer makes exactly one kind of network request: thumbnails from
-`i.ytimg.com`. There is no analytics, no storage, no iframe and no upload.
+`i.ytimg.com`. There is no YouTube Data API call (no key, no quota), no analytics,
+no storage, no iframe and no upload.

@@ -74,13 +74,18 @@ Dependency direction: `app.js → shelf.js → format.js`. Never the other way.
 
 ## Known issues
 
-- Thumbnails fall back through `maxresdefault → sddefault → hqdefault → mqdefault`.
-  A missing `maxres` is often **HTTP 404 with a 120×90 grey "…" image body**;
-  Chrome decodes it and fires `load`, not `error`, so `withFallback()` treats a
-  natural width ≤ 120 as a miss. Course covers try up to six chapters, and deck,
-  filmstrip and course-sheet images use the same helper. Cards that exhaust every
-  source show a clickable placeholder and raise **Fix N thumbnails** in the header;
-  the retry appends `?r=<n>` to defeat cached 404s.
+- Thumbnails fall back through a per-slot ladder: `full` (maxres → sd → hq → mq)
+  for video cards and deck slides, `cover` (maxres → hq → mq) for course posters,
+  and `small` (hq → mq) for the filmstrip and course rows. A missing `maxres` is
+  often **HTTP 404 with a 120×90 grey "…" image body**; Chrome decodes it and
+  fires `load`, not `error`, so `withFallback()` treats a natural width ≤ 120 as a
+  miss. Course covers try up to six chapters. Cards that exhaust every source show
+  a clickable placeholder and raise **Fix N thumbnails**; a retry appends `?r=<n>`
+  only to the IDs that failed, so the other cards stay cache hits.
+- **No YouTube Data API.** Artwork comes from unauthenticated `i.ytimg.com`
+  images: no key, no quota, no `googleapis.com`. Probes are sequential per card
+  (next quality is requested only after the previous body is rejected), and the
+  browser caps connections per host.
 - A backup exported before the catalog shipped has no `playlists` key. The viewer
   reports `no playlist catalog` and explains it in the catalog view; it is not an
   empty catalog. `decodeBackup` exposes `hasPlaylistCatalog` for this distinction.

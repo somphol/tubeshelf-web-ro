@@ -54,6 +54,8 @@ const state = {
   // which IDs exhausted every quality so the header can offer a retry, and
   // bump a counter to defeat the browser's cached 404s.
   thumbFailures: new Set(),
+  thumbFailedIDs: new Set(),
+  retryIDs: new Set(),
   thumbAttempt: 0,
 };
 
@@ -63,6 +65,17 @@ const FILTER_TITLES = {
   unwatched: "Unwatched",
   unsorted: "Unsorted",
   playlists: "Playlist Catalog",
+};
+
+/**
+ * Resolution ladders per slot. Small slots skip maxres on purpose: an old
+ * course can otherwise spend three 404s before reaching a usable 480 px image,
+ * and a filmstrip tile is 84 px wide.
+ */
+const THUMB_LADDERS = {
+  full: ["maxresdefault", "sddefault", "hqdefault", "mqdefault"],
+  cover: ["maxresdefault", "hqdefault", "mqdefault"],
+  small: ["hqdefault", "mqdefault"],
 };
 
 /* ---------- loading ---------- */
@@ -76,6 +89,10 @@ function loadText(text, name) {
     state.query = "";
     state.page = 0;
     state.shuffleSeed = null;
+    state.thumbFailures.clear();
+    state.thumbFailedIDs.clear();
+    state.retryIDs.clear();
+    state.thumbAttempt = 0;
     closeDeck();
     closeCourse();
     $("#landing").hidden = true;
@@ -342,16 +359,20 @@ function refreshRetryButton() {
 }
 
 function retryThumbnails() {
+  // Only the failed IDs get a new query string; everything else stays a cache
+  // hit, so a retry cannot turn into a 48-image burst.
+  state.retryIDs = new Set(state.thumbFailedIDs);
+  state.thumbFailedIDs.clear();
   state.thumbFailures.clear();
-  state.thumbAttempt += 1; // a new query string sidesteps cached 404 responses
+  state.thumbAttempt += 1;
   if (state.deck) renderDeck();
   renderContent();
   toast("Reloading thumbnails…");
 }
 
 /** Append the retry counter so a known-404 URL is not served from cache. */
-function withAttempt(url) {
-  return state.thumbAttempt ? `${url}?r=${state.thumbAttempt}` : url;
+function withAttempt(videoID, url) {
+  return state.retryIDs.has(videoID) ? `${url}?r=${state.thumbAttempt}` : url;
 }
 
 function pager(items, window) {
@@ -446,15 +467,17 @@ function withFallback(img, urls, onGiveUp) {
   return img;
 }
 
-function imageSources(videoIDs) {
+function imageSources(videoIDs, ladder = "full") {
   const ids = (Array.isArray(videoIDs) ? videoIDs : [videoIDs]).filter(Boolean);
-  return ids.flatMap((id) => thumbnailCandidates(id).map(withAttempt));
+  const qualities = THUMB_LADDERS[ladder] || THUMB_LADDERS.full;
+  return ids.flatMap((id) => thumbnailCandidates(id, qualities).map((url) => withAttempt(id, url)));
 }
 
-function thumb(videoIDs, badge) {
+function thumb(videoIDs, badge, ladder = "full") {
   const wrap = el("div", { class: "thumb" });
   const ids = (Array.isArray(videoIDs) ? videoIDs : [videoIDs]).filter(Boolean).slice(0, 6);
-  const img = withFallback(el("img", { alt: "", loading: "lazy" }), imageSources(ids), () => {
+  const img = withFallback(el("img", { alt: "", loading: "lazy" }), imageSources(ids, ladder), () => {
+    ids.forEach((id) => state.thumbFailedIDs.add(id));
     state.thumbFailures.add(ids[0] || "unknown");
     img.remove();
     wrap.prepend(placeholderNode());
@@ -518,7 +541,7 @@ function courseCard(playlist) {
     thumb(playlist.items.map((item) => item.videoID), el("span", {
       class: "chapters",
       text: `${playlist.items.length} chapters`,
-    })),
+    }), "cover"),
     el("div", { class: "card-body" },
       el("div", { class: "card-title", text: playlist.title }),
       el("div", { class: "card-meta" },
@@ -587,7 +610,7 @@ function renderDeck() {
   const backdrop = el("div", { class: "deck-backdrop" });
   if (backdropID) {
     const chapterIDs = playlist ? playlist.items.slice(0, 3).map((item) => item.videoID) : [backdropID];
-    backdrop.append(withFallback(el("img", { alt: "", loading: "lazy" }), imageSources(chapterIDs), () => {}));
+    backdrop.append(withFallback(el("img", { alt: "", loading: "lazy" }), imageSources(chapterIDs, "small"), () => {}));
   }
 
   const top = el("div", { class: "deck-top" },
@@ -608,7 +631,7 @@ function renderDeck() {
   } else {
     const mosaic = el("div", { class: "mosaic", style: "max-width:min(100%,780px);width:100%" });
     for (const item of playlist.items.slice(0, 9)) {
-      const img = withFallback(el("img", { alt: "", loading: "lazy" }), imageSources(item.videoID), () => {
+      const img = withFallback(el("img", { alt: "", loading: "lazy" }), imageSources(item.videoID, "cover"), () => {
         img.remove();
       });
       img.style.width = "100%";
@@ -649,7 +672,7 @@ function renderDeck() {
       title: item.kind === "video" ? item.video.title : item.playlist.title,
     });
     if (ids.length) {
-      button.append(withFallback(el("img", { alt: "", loading: "lazy" }), imageSources(ids), () => {}));
+      button.append(withFallback(el("img", { alt: "", loading: "lazy" }), imageSources(ids, "small"), () => {}));
     }
     film.append(button);
   }
@@ -792,7 +815,7 @@ function renderCourse() {
   const head = el("div", { class: "course-head" });
   const coverIDs = playlist.items.slice(0, 3).map((item) => item.videoID);
   if (coverIDs.length) {
-    head.append(withFallback(el("img", { alt: "" }), imageSources(coverIDs), () => {}));
+    head.append(withFallback(el("img", { alt: "" }), imageSources(coverIDs, "cover"), () => {}));
   }
   head.append(el("div", {},
     el("h2", { text: playlist.title }),
@@ -841,7 +864,7 @@ function renderCourse() {
       }),
       (() => {
         const img = el("img", { alt: "", loading: "lazy" });
-        withFallback(img, imageSources(item.videoID), () => {
+        withFallback(img, imageSources(item.videoID, "small"), () => {
           img.style.visibility = "hidden";
         });
         return img;
