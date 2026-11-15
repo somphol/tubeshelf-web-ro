@@ -43,6 +43,25 @@ test("decodes an envelope with videos and playlists", () => {
   assert.equal(result.playlists[0].items.length, 1);
   assert.deepEqual(result.playlists[0].watchedItemIDs, ["k7RM-ot2NWY"]);
   assert.deepEqual(result.pinnedTags, ["Math"]);
+  assert.equal(result.hasPlaylistCatalog, true);
+});
+
+test("an envelope without a playlists key is marked as lacking the catalog", () => {
+  const old = { format: "tubeshelf.backup", version: 1, library: envelope.library };
+  const result = decodeBackup(JSON.stringify(old));
+  assert.equal(result.hasPlaylistCatalog, false);
+  assert.deepEqual(result.playlists, []);
+});
+
+test("an explicitly empty catalog counts as present", () => {
+  const result = decodeBackup(JSON.stringify({ ...envelope, playlists: [] }));
+  assert.equal(result.hasPlaylistCatalog, true);
+  assert.deepEqual(result.playlists, []);
+});
+
+test("a raw library file has no catalog", () => {
+  const result = decodeBackup(JSON.stringify({ videos: [{ youtubeID: "jNQXAC9IVRw", title: "B" }] }));
+  assert.equal(result.hasPlaylistCatalog, false);
 });
 
 test("accepts a raw library file", () => {

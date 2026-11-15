@@ -17,10 +17,10 @@ send one anywhere.
 `node --test` coverage. `PLAN.md` remains the specification; this file records what
 actually shipped.
 
-## Commands (once implemented)
+## Commands
 
 ```bash
-node --test tests/                      # 14 tests: parsing, filters, pagination
+node --test tests/                      # 17 tests: parsing, filters, pagination, catalog flag
 python3 -m http.server 8765             # ES modules require http://
 open "http://localhost:8765/?demo=1"
 ```
@@ -75,7 +75,12 @@ Dependency direction: `app.js → shelf.js → format.js`. Never the other way.
 ## Known issues
 
 - Thumbnails fall back through `maxresdefault → … → mqdefault`; a 404 in the console
-  for the first candidate is normal.
+  for the first candidate is normal. Cards that exhaust all four qualities show a
+  clickable placeholder and raise **Fix N thumbnails** in the header, which clears
+  the failure set and appends `?r=<n>` to defeat cached 404s.
+- A backup exported before the catalog shipped has no `playlists` key. The viewer
+  reports `no playlist catalog` and explains it in the catalog view; it is not an
+  empty catalog. `decodeBackup` exposes `hasPlaylistCatalog` for this distinction.
 - The viewer is read-only: no ticking, tagging or file writing.
 - 390 px is verified with Puppeteer-driven emulation (Chrome headless clamps
   `--window-size` to 500 CSS px, so use `puppeteer-core` for narrow checks).

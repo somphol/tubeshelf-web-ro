@@ -108,6 +108,7 @@ export function decodeBackup(text) {
   let library;
   let playlists = [];
   let exportedAt = null;
+  let hasPlaylistCatalog = false;
 
   if (data && data.format !== undefined) {
     if (data.format !== "tubeshelf.backup") {
@@ -118,7 +119,8 @@ export function decodeBackup(text) {
     }
     library = data.library;
     exportedAt = typeof data.exportedAt === "string" ? data.exportedAt : null;
-    playlists = Array.isArray(data.playlists) ? data.playlists : [];
+    hasPlaylistCatalog = Array.isArray(data.playlists);
+    playlists = hasPlaylistCatalog ? data.playlists : [];
   } else {
     if (!data || !Array.isArray(data.videos)) {
       throw new BackupError(
@@ -148,6 +150,7 @@ export function decodeBackup(text) {
   return {
     videos,
     playlists: normalizedPlaylists,
+    hasPlaylistCatalog,
     pinnedTags: normalizeTags(library.pinnedTags || []),
     exportedAt,
   };

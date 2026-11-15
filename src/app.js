@@ -50,6 +50,11 @@ const state = {
   deck: null,
   course: null,
   shuffleSeed: null,
+  // Thumbnails can fail transiently (CDN cold cache, offline blip). Remember
+  // which IDs exhausted every quality so the header can offer a retry, and
+  // bump a counter to defeat the browser's cached 404s.
+  thumbFailures: new Set(),
+  thumbAttempt: 0,
 };
 
 const FILTER_TITLES = {
@@ -77,9 +82,11 @@ function loadText(text, name) {
     $("#main").hidden = false;
     render();
     toast(
-      `${data.videos.length} videos · ${data.playlists.length} playlists${
-        data.exportedAt ? " · exported " + new Date(data.exportedAt).toLocaleDateString() : ""
-      }`
+      `${data.videos.length} videos · ${
+        data.hasPlaylistCatalog
+          ? `${data.playlists.length} playlists`
+          : "no playlist catalog"
+      }${data.exportedAt ? " · exported " + new Date(data.exportedAt).toLocaleDateString() : ""}`
     );
   } catch (error) {
     toast(error.message || "That file could not be read.");
@@ -115,7 +122,9 @@ function renderMeta() {
   const parts = [
     state.fileName,
     `${data.videos.length} videos`,
-    `${data.playlists.length} playlist${data.playlists.length === 1 ? "" : "s"}`,
+    data.hasPlaylistCatalog
+      ? `${data.playlists.length} playlist${data.playlists.length === 1 ? "" : "s"}`
+      : "no playlist catalog",
   ];
   if (data.exportedAt) parts.push(`exported ${new Date(data.exportedAt).toLocaleDateString()}`);
   meta.append(el("span", { text: parts.join("  ·  ") }));
@@ -260,6 +269,7 @@ function renderContent() {
         el("option", { value: "everything", selected: state.scope === "everything", text: "Everything" })
       )
     ),
+    retryButton(),
     shuffleButton()
   );
   content.append(head);
@@ -281,6 +291,9 @@ function subtitle(items, window) {
   const videos = state.data.videos.length;
   const courses = state.data.playlists.length;
   if (state.filter.kind === "playlists") {
+    if (!state.data.hasPlaylistCatalog) {
+      return "This backup was exported without its playlist catalog";
+    }
     return `${courses} course${courses === 1 ? "" : "s"} · ${state.data.playlists.reduce((n, p) => n + p.items.length, 0)} chapters`;
   }
   if (state.filter.kind === "tag") {
@@ -303,6 +316,42 @@ function shuffleButton() {
       renderContent();
     },
   }, active ? "Shuffle again" : "Shuffle");
+}
+
+function retryButton() {
+  const count = state.thumbFailures.size;
+  return el("button", {
+    class: "button warn",
+    id: "retry-thumbs",
+    hidden: count === 0,
+    title: "Reload artwork that failed to load",
+    onclick: retryThumbnails,
+  }, retryLabel(count));
+}
+
+function retryLabel(count) {
+  return `Fix ${count} thumbnail${count === 1 ? "" : "s"}`;
+}
+
+function refreshRetryButton() {
+  const button = document.getElementById("retry-thumbs");
+  if (!button) return;
+  const count = state.thumbFailures.size;
+  button.hidden = count === 0;
+  button.textContent = retryLabel(count);
+}
+
+function retryThumbnails() {
+  state.thumbFailures.clear();
+  state.thumbAttempt += 1; // a new query string sidesteps cached 404 responses
+  if (state.deck) renderDeck();
+  renderContent();
+  toast("Reloading thumbnails…");
+}
+
+/** Append the retry counter so a known-404 URL is not served from cache. */
+function withAttempt(url) {
+  return state.thumbAttempt ? `${url}?r=${state.thumbAttempt}` : url;
 }
 
 function pager(items, window) {
@@ -356,9 +405,15 @@ function emptyState() {
     );
   }
   if (state.filter.kind === "playlists") {
+    if (!state.data.hasPlaylistCatalog) {
+      return el("div", { class: "empty" },
+        el("h3", { text: "This backup has no playlist catalog" }),
+        el("p", { text: "It was exported before TubeShelf wrote courses into backups. Export again from the current app, then reopen the file. Your videos are all here." })
+      );
+    }
     return el("div", { class: "empty" },
       el("h3", { text: "No playlists in this backup" }),
-      el("p", { text: "The export carries videos only." })
+      el("p", { text: "The export has an empty catalog." })
     );
   }
   return el("div", { class: "empty" },
@@ -372,20 +427,37 @@ function emptyState() {
 function thumb(videoID, badge) {
   const wrap = el("div", { class: "thumb" });
   const img = el("img", { alt: "", loading: "lazy" });
-  const candidates = thumbnailCandidates(videoID);
+  const candidates = thumbnailCandidates(videoID).map(withAttempt);
   let index = 0;
   img.src = candidates[0];
   img.addEventListener("error", () => {
     index += 1;
     if (index < candidates.length) img.src = candidates[index];
     else {
+      state.thumbFailures.add(videoID);
       img.remove();
-      wrap.prepend(el("div", { class: "placeholder", text: "No artwork" }));
+      wrap.prepend(placeholderNode());
+      refreshRetryButton();
     }
   });
   wrap.append(img);
   if (badge) wrap.append(badge);
   return wrap;
+}
+
+/** Artwork gave up. Clicking the tile retries without opening the card. */
+function placeholderNode() {
+  return el("div", {
+    class: "placeholder",
+    title: "Click to reload this artwork",
+    onclick: (event) => {
+      event.stopPropagation();
+      retryThumbnails();
+    },
+  },
+    el("span", { text: "No artwork" }),
+    el("span", { class: "retry", text: "Click to retry" })
+  );
 }
 
 function durationBadge(seconds) {
@@ -493,7 +565,7 @@ function renderDeck() {
   const backdropID = video ? video.youtubeID : playlist.items[0]?.videoID;
 
   const backdrop = el("div", { class: "deck-backdrop" });
-  if (backdropID) backdrop.append(el("img", { alt: "", loading: "lazy", src: thumbnailCandidates(backdropID)[0] }));
+  if (backdropID) backdrop.append(el("img", { alt: "", loading: "lazy", src: withAttempt(thumbnailCandidates(backdropID)[0]) }));
 
   const top = el("div", { class: "deck-top" },
     el("button", { class: "pill", onclick: closeDeck }, "‹ Shelf"),
@@ -506,13 +578,13 @@ function renderDeck() {
 
   const media = el("div", { class: "deck-media" });
   if (video) {
-    const img = el("img", { alt: "", src: thumbnailCandidates(video.youtubeID)[0] });
+    const img = el("img", { alt: "", src: withAttempt(thumbnailCandidates(video.youtubeID)[0]) });
     img.addEventListener("error", () => { img.style.visibility = "hidden"; });
     media.append(img);
   } else {
     const mosaic = el("div", { class: "mosaic", style: "max-width:min(100%,780px);width:100%" });
     for (const item of playlist.items.slice(0, 9)) {
-      const img = el("img", { alt: "", loading: "lazy", src: thumbnailCandidates(item.videoID)[0] });
+      const img = el("img", { alt: "", loading: "lazy", src: withAttempt(thumbnailCandidates(item.videoID)[0]) });
       img.style.width = "100%";
       img.style.aspectRatio = "16 / 9";
       img.style.objectFit = "cover";
@@ -548,7 +620,7 @@ function renderDeck() {
       onclick: () => deckJump(index),
       title: item.kind === "video" ? item.video.title : item.playlist.title,
     });
-    if (id) button.append(el("img", { alt: "", loading: "lazy", src: thumbnailCandidates(id)[0] }));
+    if (id) button.append(el("img", { alt: "", loading: "lazy", src: withAttempt(thumbnailCandidates(id)[0]) }));
     film.append(button);
   }
 
@@ -689,7 +761,7 @@ function renderCourse() {
   ));
 
   const head = el("div", { class: "course-head" });
-  if (coverID) head.append(el("img", { alt: "", src: thumbnailCandidates(coverID)[0] }));
+  if (coverID) head.append(el("img", { alt: "", src: withAttempt(thumbnailCandidates(coverID)[0]) }));
   head.append(el("div", {},
     el("h2", { text: playlist.title }),
     el("div", { class: "deck-meta" },
@@ -735,7 +807,7 @@ function renderCourse() {
         class: playlistWatched(playlist, item.videoID) ? "tick on" : "tick",
         text: playlistWatched(playlist, item.videoID) ? "✓" : "○",
       }),
-      el("img", { alt: "", loading: "lazy", src: thumbnailCandidates(item.videoID)[0] }),
+      el("img", { alt: "", loading: "lazy", src: withAttempt(thumbnailCandidates(item.videoID)[0]) }),
       el("div", {},
         el("div", { class: "title", text: item.title }),
         el("div", { class: "sub", text: [item.channel, formatDuration(item.durationSeconds)].filter(Boolean).join(" · ") })
