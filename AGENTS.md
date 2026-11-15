@@ -1,0 +1,81 @@
+# AGENTS.md
+
+Read `PLAN.md`. It is the specification for this repository.
+
+## What it is
+
+A static, read-only web viewer for TubeShelf backup files. One page, no build step,
+no server, no dependencies. A visitor picks a JSON backup; it is parsed in the
+browser and never uploaded.
+
+It is **not** an editor, a sync client, or a backend. It must never store a shelf or
+send one anywhere.
+
+## Current state
+
+**Documentation only.** There is no implementation yet. The next agent should start
+at "Build order" in `PLAN.md` (step 1: `src/format.js` + tests).
+
+## Commands (once implemented)
+
+```bash
+node --test tests/                      # pure format + query modules
+
+python3 -m http.server 8765             # ES modules require http://
+open "http://localhost:8765/?demo=1"    # render the built-in demo shelf
+```
+
+Headless visual check (Chrome is installed on this Mac):
+
+```bash
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+  --headless=new --disable-gpu --hide-scrollbars \
+  --window-size=1240,800 --screenshot=/tmp/web-desktop.png \
+  "http://localhost:8765/?demo=1"
+```
+
+There is **no** build, bundler or package.json dependency to install. Do not add one
+without a strong reason; the value of this page is that it is auditable in one
+sitting.
+
+## Architecture
+
+- `src/format.js` — decode and validate the two accepted shapes, normalise videos.
+  Pure, no DOM, unit tested.
+- `src/shelf.js` — filters, search, counts, pagination. Pure, no DOM, unit tested.
+- `src/app.js` — rendering, file input, drag-drop, deck, keyboard.
+- `src/demo.js` — seven public videos, imported as a module so no fetch is needed.
+- `index.html` / `styles.css` — shell and layout. System fonts only.
+
+Dependency direction: `app.js → shelf.js → format.js`. Never the other way.
+
+## Decisions and constraints
+
+- **The file never leaves the browser.** No upload, no analytics, no localStorage,
+  IndexedDB or service worker. A reload must forget the file.
+- **Text is rendered with `textContent`.** File-derived strings never go through
+  `innerHTML`, and every link host is checked against an allowlist
+  (`youtube.com`, `youtu.be`, `i.ytimg.com`, `youtube-nocookie.com`).
+- **Validate before rendering.** Video IDs must match `^[A-Za-z0-9_-]{11}$`;
+  reject foreign JSON; refuse `version > 1`; cap the file at 32 MB and the shelf at
+  50,000 videos.
+- **No shelf data in this repository.** It is public. The demo file is public
+  YouTube links only. Never add a "load from URL" feature.
+- **The format is owned by the Mac app.** `format.schema.json` is a copy, not the
+  source of truth; bump it together with the app and the tests.
+- **Read-only means read-only.** No editing affordances, no "suggest a tag", no
+  write path — not even a disabled button.
+
+## Known issues
+
+- None yet; nothing is implemented.
+- Thumbnail hotlinking can be blocked by some networks; the card must degrade to a
+  placeholder while keeping a working YouTube link.
+
+## Continuity
+
+- Repo: <https://github.com/somphol/tubeshelf-web-ro> (public, Pages from `main`).
+- Target URL: <https://somphol.github.io/tubeshelf-web-ro/> — Pages is not enabled
+  yet; enable it after `index.html` exists.
+- The writer of the format (the Mac app) is private and not required to implement
+  this plan.

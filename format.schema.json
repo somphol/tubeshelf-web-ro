@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://somphol.github.io/tubeshelf-web-ro/format.schema.json",
+  "title": "TubeShelf backup (viewer contract)",
+  "description": "Documentation of what the web viewer accepts. The Mac app owns the format; this file must be updated with it.",
+  "oneOf": [
+    { "$ref": "#/$defs/envelope" },
+    { "$ref": "#/$defs/library" }
+  ],
+  "$defs": {
+    "envelope": {
+      "type": "object",
+      "required": ["format", "version", "library"],
+      "properties": {
+        "format": { "const": "tubeshelf.backup" },
+        "version": { "type": "integer", "minimum": 1, "maximum": 1 },
+        "exportedAt": { "type": "string", "format": "date-time" },
+        "library": { "$ref": "#/$defs/library" }
+      }
+    },
+    "library": {
+      "type": "object",
+      "required": ["videos"],
+      "properties": {
+        "videos": {
+          "type": "array",
+          "maxItems": 50000,
+          "items": { "$ref": "#/$defs/video" }
+        },
+        "pinnedTags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "video": {
+      "type": "object",
+      "required": ["youtubeID", "title"],
+      "properties": {
+        "id": { "type": "string" },
+        "youtubeID": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{11}$"
+        },
+        "title": { "type": "string" },
+        "channel": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "note": { "type": "string" },
+        "addedAt": { "type": "string", "format": "date-time" },
+        "durationSeconds": { "type": "integer", "minimum": 0 },
+        "isFavorite": { "type": "boolean" }
+      }
+    }
+  }
+}
