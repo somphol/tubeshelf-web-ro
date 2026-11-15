@@ -105,5 +105,5 @@ Dependency direction: `app.js → shelf.js → format.js`. Never the other way.
   <https://github.com/somphol/tubeshelf>; its README and `DISCLAIMER.md` describe
   the unsigned build.
 - Editing lives in the companion app
-  <https://github.com/somphol/tubeshelf-web-rw> (phase 1; Drive sync planned).
+  <https://github.com/somphol/tubeshelf-web-rw> (editing and optional Drive sync).
   This repository stays read-only: do not add edit controls here.
