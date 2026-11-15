@@ -53,9 +53,10 @@ Dependency direction: `app.js → shelf.js → format.js`. Never the other way.
 
 ## Decisions and constraints
 
-- **The format is additive and version 1.** `watchStatus` and `playlists` were
-  added after this plan was written; treat every new field as optional, and never
-  bump `version` for additions. The Mac app is the source of truth.
+- **The format is additive and version 1.** `watchStatus`, `playlists` and
+  `pinnedChannels` were added after this plan was written; treat every new field as
+  optional, and never bump `version` for additions. The Mac app is the source of
+  truth.
 - **No embedded playback.** Course slides are posters and video slides link out.
 - **The file never leaves the browser.** No upload, no analytics, no localStorage,
   IndexedDB or service worker. A reload must forget the file.

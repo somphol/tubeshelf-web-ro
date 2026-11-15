@@ -26,8 +26,9 @@ Choose a backup with the button, or drop the `.json` anywhere on the page.
   optional playlist catalog. Older backups without `playlists` still load, and the
   catalog view explains that the file predates the catalog instead of implying it
   is empty.
-- Sidebar: All, Favorites, Unwatched, Unsorted, Playlist Catalog, pinned and all
-  categories (videos + courses), and channels. The filter field searches the lists.
+- Sidebar: All, Favorites, Unwatched, Unsorted, Playlist Catalog, pinned categories
+  and pinned channels, all categories (videos + courses), and channels. The filter
+  field searches the lists; a pinned channel leaves the Channels list.
 - Grid with videos and, in a category that contains them, course cards — the same
   mixing as the Mac app. Pagination at 24/48/96/144, shuffle.
 - Search scope: Titles or Everything (channel, note, categories).

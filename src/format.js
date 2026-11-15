@@ -36,6 +36,22 @@ export function normalizeTags(list) {
   return out;
 }
 
+/** Channels keep YouTube's spelling; only trim, collapse and dedupe. */
+export function normalizeChannels(list) {
+  const seen = new Set();
+  const out = [];
+  for (const raw of Array.isArray(list) ? list : []) {
+    if (typeof raw !== "string") continue;
+    const name = raw.trim().replace(/\s+/g, " ");
+    if (!name) continue;
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(name);
+  }
+  return out;
+}
+
 function normalizeVideo(raw) {
   if (!raw || typeof raw !== "object") return null;
   if (!isVideoID(raw.youtubeID)) return null;
@@ -90,7 +106,7 @@ function normalizePlaylist(raw) {
 
 /**
  * @param {string} text raw file contents
- * @returns {{videos: object[], playlists: object[], pinnedTags: string[], exportedAt: string|null}}
+ * @returns {{videos: object[], playlists: object[], hasPlaylistCatalog: boolean, pinnedTags: string[], pinnedChannels: string[], exportedAt: string|null}}
  */
 export function decodeBackup(text) {
   if (typeof text !== "string") throw new BackupError("That file could not be read as text.");
@@ -152,6 +168,7 @@ export function decodeBackup(text) {
     playlists: normalizedPlaylists,
     hasPlaylistCatalog,
     pinnedTags: normalizeTags(library.pinnedTags || []),
+    pinnedChannels: normalizeChannels(library.pinnedChannels || []),
     exportedAt,
   };
 }

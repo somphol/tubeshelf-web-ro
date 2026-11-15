@@ -5,6 +5,7 @@ export const demoBackup = {
   exportedAt: "2026-11-14T12:00:00Z",
   library: {
     pinnedTags: ["Math", "Cooking"],
+    pinnedChannels: ["3Blue1Brown"],
     videos: [
       {
         youtubeID: "dQw4w9WgXcQ",

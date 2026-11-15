@@ -173,6 +173,10 @@ function renderSidebar() {
   const pinned = data.pinnedTags
     .map((name) => categories.find((c) => c.name.toLowerCase() === name.toLowerCase()))
     .filter(Boolean);
+  const pinnedChannelRows = data.pinnedChannels
+    .map((name) => channels.find((c) => c.name.toLowerCase() === name.toLowerCase()))
+    .filter(Boolean);
+  const pinnedChannelKeys = new Set(pinnedChannelRows.map((c) => c.name.toLowerCase()));
 
   sidebar.append(sideList("Library", [
     row("All videos", data.videos.length, { kind: "all" }),
@@ -182,8 +186,11 @@ function renderSidebar() {
     row("Playlist Catalog", data.playlists.length, { kind: "playlists" }),
   ]));
 
-  if (pinned.length) {
-    sidebar.append(sideList("Pinned", pinned.map((entry) => row(entry.name, entry.count, { kind: "tag", value: entry.name }))));
+  if (pinned.length || pinnedChannelRows.length) {
+    sidebar.append(sideList("Pinned", [
+      ...pinned.map((entry) => row(entry.name, entry.count, { kind: "tag", value: entry.name })),
+      ...pinnedChannelRows.map((entry) => row(entry.name, entry.count, { kind: "channel", value: entry.name })),
+    ]));
   }
 
   const rest = categories.filter((entry) => !pinned.some((p) => p.name === entry.name));
@@ -191,7 +198,10 @@ function renderSidebar() {
   if (!categoryRows.length) categoryRows.push(el("div", { class: "side-empty", text: "No categories yet" }));
   sidebar.append(sideList("Categories", categoryRows));
 
-  const channelRows = channels.slice(0, 40).map((entry) => row(entry.name, entry.count, { kind: "channel", value: entry.name }));
+  const channelRows = channels
+    .filter((entry) => !pinnedChannelKeys.has(entry.name.toLowerCase()))
+    .slice(0, 40)
+    .map((entry) => row(entry.name, entry.count, { kind: "channel", value: entry.name }));
   if (channelRows.length) sidebar.append(sideList("Channels", channelRows));
 }
 

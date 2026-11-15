@@ -122,3 +122,15 @@ test("thumbnailCandidates honours a reduced quality ladder", () => {
     ["hqdefault.jpg", "mqdefault.jpg"]
   );
 });
+
+test("pinned channels keep YouTube spelling and collapse duplicates", () => {
+  const result = decodeBackup(
+    JSON.stringify({
+      videos: [{ youtubeID: "dQw4w9WgXcQ", title: "A" }],
+      pinnedTags: [],
+      pinnedChannels: [" 3Blue1Brown ", "3blue1brown", "", "Bake  Club"],
+    })
+  );
+  assert.deepEqual(result.pinnedChannels, ["3Blue1Brown", "Bake Club"]);
+  assert.deepEqual(decodeBackup(JSON.stringify({ videos: [{ youtubeID: "dQw4w9WgXcQ", title: "A" }] })).pinnedChannels, []);
+});
