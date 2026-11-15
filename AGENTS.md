@@ -74,10 +74,13 @@ Dependency direction: `app.js → shelf.js → format.js`. Never the other way.
 
 ## Known issues
 
-- Thumbnails fall back through `maxresdefault → … → mqdefault`; a 404 in the console
-  for the first candidate is normal. Cards that exhaust all four qualities show a
-  clickable placeholder and raise **Fix N thumbnails** in the header, which clears
-  the failure set and appends `?r=<n>` to defeat cached 404s.
+- Thumbnails fall back through `maxresdefault → sddefault → hqdefault → mqdefault`.
+  A missing `maxres` is often **HTTP 404 with a 120×90 grey "…" image body**;
+  Chrome decodes it and fires `load`, not `error`, so `withFallback()` treats a
+  natural width ≤ 120 as a miss. Course covers try up to six chapters, and deck,
+  filmstrip and course-sheet images use the same helper. Cards that exhaust every
+  source show a clickable placeholder and raise **Fix N thumbnails** in the header;
+  the retry appends `?r=<n>` to defeat cached 404s.
 - A backup exported before the catalog shipped has no `playlists` key. The viewer
   reports `no playlist catalog` and explains it in the catalog view; it is not an
   empty catalog. `decodeBackup` exposes `hasPlaylistCatalog` for this distinction.

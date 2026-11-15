@@ -424,21 +424,41 @@ function emptyState() {
 
 /* ---------- cards ---------- */
 
-function thumb(videoID, badge) {
-  const wrap = el("div", { class: "thumb" });
-  const img = el("img", { alt: "", loading: "lazy" });
-  const candidates = thumbnailCandidates(videoID).map(withAttempt);
+/**
+ * YouTube answers a missing `maxresdefault` with 404 + a 120×90 grey "…" image.
+ * Chrome decodes that body and fires `load`, not `error`, so size is the only
+ * reliable signal that the quality is absent. Later chapters are tried too:
+ * old courses often start with a video whose artwork is gone.
+ */
+function withFallback(img, urls, onGiveUp) {
   let index = 0;
-  img.src = candidates[0];
-  img.addEventListener("error", () => {
+  const advance = () => {
     index += 1;
-    if (index < candidates.length) img.src = candidates[index];
-    else {
-      state.thumbFailures.add(videoID);
-      img.remove();
-      wrap.prepend(placeholderNode());
-      refreshRetryButton();
-    }
+    if (index < urls.length) img.src = urls[index];
+    else onGiveUp?.();
+  };
+  img.addEventListener("error", advance);
+  img.addEventListener("load", () => {
+    if (img.naturalWidth <= 120) advance();
+  });
+  if (urls.length === 0) onGiveUp?.();
+  else img.src = urls[0];
+  return img;
+}
+
+function imageSources(videoIDs) {
+  const ids = (Array.isArray(videoIDs) ? videoIDs : [videoIDs]).filter(Boolean);
+  return ids.flatMap((id) => thumbnailCandidates(id).map(withAttempt));
+}
+
+function thumb(videoIDs, badge) {
+  const wrap = el("div", { class: "thumb" });
+  const ids = (Array.isArray(videoIDs) ? videoIDs : [videoIDs]).filter(Boolean).slice(0, 6);
+  const img = withFallback(el("img", { alt: "", loading: "lazy" }), imageSources(ids), () => {
+    state.thumbFailures.add(ids[0] || "unknown");
+    img.remove();
+    wrap.prepend(placeholderNode());
+    refreshRetryButton();
   });
   wrap.append(img);
   if (badge) wrap.append(badge);
@@ -495,7 +515,7 @@ function courseCard(playlist) {
     class: "card",
     onclick: () => openCourse(playlist),
   },
-    thumb(playlist.items[0] ? playlist.items[0].videoID : "", el("span", {
+    thumb(playlist.items.map((item) => item.videoID), el("span", {
       class: "chapters",
       text: `${playlist.items.length} chapters`,
     })),
@@ -565,7 +585,10 @@ function renderDeck() {
   const backdropID = video ? video.youtubeID : playlist.items[0]?.videoID;
 
   const backdrop = el("div", { class: "deck-backdrop" });
-  if (backdropID) backdrop.append(el("img", { alt: "", loading: "lazy", src: withAttempt(thumbnailCandidates(backdropID)[0]) }));
+  if (backdropID) {
+    const chapterIDs = playlist ? playlist.items.slice(0, 3).map((item) => item.videoID) : [backdropID];
+    backdrop.append(withFallback(el("img", { alt: "", loading: "lazy" }), imageSources(chapterIDs), () => {}));
+  }
 
   const top = el("div", { class: "deck-top" },
     el("button", { class: "pill", onclick: closeDeck }, "‹ Shelf"),
@@ -578,13 +601,16 @@ function renderDeck() {
 
   const media = el("div", { class: "deck-media" });
   if (video) {
-    const img = el("img", { alt: "", src: withAttempt(thumbnailCandidates(video.youtubeID)[0]) });
-    img.addEventListener("error", () => { img.style.visibility = "hidden"; });
+    const img = withFallback(el("img", { alt: "" }), imageSources(video.youtubeID), () => {
+      img.style.visibility = "hidden";
+    });
     media.append(img);
   } else {
     const mosaic = el("div", { class: "mosaic", style: "max-width:min(100%,780px);width:100%" });
     for (const item of playlist.items.slice(0, 9)) {
-      const img = el("img", { alt: "", loading: "lazy", src: withAttempt(thumbnailCandidates(item.videoID)[0]) });
+      const img = withFallback(el("img", { alt: "", loading: "lazy" }), imageSources(item.videoID), () => {
+        img.remove();
+      });
       img.style.width = "100%";
       img.style.aspectRatio = "16 / 9";
       img.style.objectFit = "cover";
@@ -614,13 +640,17 @@ function renderDeck() {
   const upper = Math.min(state.deck.items.length, state.deck.index + radius + 1);
   for (let index = lower; index < upper; index += 1) {
     const item = state.deck.items[index];
-    const id = item.kind === "video" ? item.video.youtubeID : item.playlist.items[0]?.videoID;
+    const ids = item.kind === "video"
+      ? [item.video.youtubeID]
+      : item.playlist.items.slice(0, 3).map((chapter) => chapter.videoID);
     const button = el("button", {
       class: index === state.deck.index ? "current" : "",
       onclick: () => deckJump(index),
       title: item.kind === "video" ? item.video.title : item.playlist.title,
     });
-    if (id) button.append(el("img", { alt: "", loading: "lazy", src: withAttempt(thumbnailCandidates(id)[0]) }));
+    if (ids.length) {
+      button.append(withFallback(el("img", { alt: "", loading: "lazy" }), imageSources(ids), () => {}));
+    }
     film.append(button);
   }
 
@@ -750,7 +780,6 @@ function renderCourse() {
   sheet.replaceChildren();
   const playlist = state.course;
   if (!playlist) return;
-  const coverID = playlist.items[0]?.videoID;
   const onShelf = playlist.items.filter((item) => state.data.videos.some((v) => v.youtubeID === item.videoID));
 
   sheet.append(el("div", { class: "deck-top" },
@@ -761,7 +790,10 @@ function renderCourse() {
   ));
 
   const head = el("div", { class: "course-head" });
-  if (coverID) head.append(el("img", { alt: "", src: withAttempt(thumbnailCandidates(coverID)[0]) }));
+  const coverIDs = playlist.items.slice(0, 3).map((item) => item.videoID);
+  if (coverIDs.length) {
+    head.append(withFallback(el("img", { alt: "" }), imageSources(coverIDs), () => {}));
+  }
   head.append(el("div", {},
     el("h2", { text: playlist.title }),
     el("div", { class: "deck-meta" },
@@ -807,7 +839,13 @@ function renderCourse() {
         class: playlistWatched(playlist, item.videoID) ? "tick on" : "tick",
         text: playlistWatched(playlist, item.videoID) ? "✓" : "○",
       }),
-      el("img", { alt: "", loading: "lazy", src: withAttempt(thumbnailCandidates(item.videoID)[0]) }),
+      (() => {
+        const img = el("img", { alt: "", loading: "lazy" });
+        withFallback(img, imageSources(item.videoID), () => {
+          img.style.visibility = "hidden";
+        });
+        return img;
+      })(),
       el("div", {},
         el("div", { class: "title", text: item.title }),
         el("div", { class: "sub", text: [item.channel, formatDuration(item.durationSeconds)].filter(Boolean).join(" · ") })

@@ -35,7 +35,9 @@ Choose a backup with the button, or drop the `.json` anywhere on the page.
   mouse wheel, filmstrip and progress. Playback opens YouTube; nothing is embedded.
 - Course sheet: ordered chapters with per-course ticks, on-shelf markers, and
   *Present* for the chapters you own.
-- Artwork retry: cards that exhaust every thumbnail quality show *No artwork —
+- Artwork retry: a missing `maxres` quality is detected even when YouTube answers
+  with a 404 plus a decodable 120×90 grey image. Quality fallback then chapter
+  fallback for course covers; cards that exhaust every source show *No artwork —
   click to retry*, and a **Fix N thumbnail(s)** button appears in the header.
   Retries bypass cached 404s with a fresh query string.
 
