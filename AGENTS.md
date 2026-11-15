@@ -101,5 +101,6 @@ Dependency direction: `app.js → shelf.js → format.js`. Never the other way.
 - Repo: <https://github.com/somphol/tubeshelf-web-ro> (public, Pages from `main`).
 - Live: <https://somphol.github.io/tubeshelf-web-ro/> (Pages from `main` / root).
 - Local check: `python3 -m http.server 8765` then `?demo=1`.
-- The writer of the format (the Mac app) is private and not required to implement
-  this plan.
+- The writer of the format (the Mac app) is public at
+  <https://github.com/somphol/tubeshelf>; its README and `DISCLAIMER.md` describe
+  the unsigned build.
