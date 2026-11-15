@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src https://i.ytimg.com data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>TubeShelf — read-only</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"></span>
+      <span>TubeShelf</span>
+      <span class="badge">read-only</span>
+    </div>
+    <div class="file-meta" id="file-meta"></div>
+    <div class="topbar-actions">
+      <button class="button" id="choose">Choose a backup…</button>
+      <input type="file" id="file" accept=".json,application/json" hidden>
+    </div>
+  </header>
+
+  <main id="main" hidden>
+    <aside id="sidebar" aria-label="Filters"></aside>
+    <section id="content" aria-live="polite"></section>
+  </main>
+
+  <section id="landing">
+    <div class="landing-card">
+      <h1>Read a TubeShelf backup</h1>
+      <p>
+        Pick a <code>.json</code> export from the TubeShelf Mac app. It is parsed in
+        this browser and never uploaded. Reload and it is forgotten.
+      </p>
+      <div class="landing-actions">
+        <button class="button primary" id="choose-2">Choose a backup…</button>
+        <button class="link" id="demo">Open the demo shelf</button>
+      </div>
+      <p class="fine">Public or unlisted data only in the demo; nothing is stored.</p>
+    </div>
+  </section>
+
+  <div id="deck" class="deck" hidden aria-label="Slide viewer"></div>
+  <div id="course" class="course-sheet" hidden aria-label="Course"></div>
+  <div id="drop" class="drop-overlay" hidden><div>Drop the backup to open it</div></div>
+  <div id="toast" class="toast" hidden></div>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

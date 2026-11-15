@@ -13,17 +13,19 @@ send one anywhere.
 
 ## Current state
 
-**Documentation only.** There is no implementation yet. The next agent should start
-at "Build order" in `PLAN.md` (step 1: `src/format.js` + tests).
+**Implemented.** `index.html`, `styles.css`, `src/{format,shelf,app,demo}.js`, and
+`node --test` coverage. `PLAN.md` remains the specification; this file records what
+actually shipped.
 
 ## Commands (once implemented)
 
 ```bash
-node --test tests/                      # pure format + query modules
-
+node --test tests/                      # 14 tests: parsing, filters, pagination
 python3 -m http.server 8765             # ES modules require http://
-open "http://localhost:8765/?demo=1"    # render the built-in demo shelf
+open "http://localhost:8765/?demo=1"
 ```
+
+Query flags for checks: `?demo=1`, `&catalog=1`, `&deck=playlist`, `&course=1`.
 
 Headless visual check (Chrome is installed on this Mac):
 
@@ -43,7 +45,7 @@ sitting.
 - `src/format.js` — decode and validate the two accepted shapes, normalise videos.
   Pure, no DOM, unit tested.
 - `src/shelf.js` — filters, search, counts, pagination. Pure, no DOM, unit tested.
-- `src/app.js` — rendering, file input, drag-drop, deck, keyboard.
+- `src/app.js` — rendering, file input, drag-drop, deck, course sheet, keys/wheel.
 - `src/demo.js` — seven public videos, imported as a module so no fetch is needed.
 - `index.html` / `styles.css` — shell and layout. System fonts only.
 
@@ -72,14 +74,18 @@ Dependency direction: `app.js → shelf.js → format.js`. Never the other way.
 
 ## Known issues
 
-- None yet; nothing is implemented.
-- Thumbnail hotlinking can be blocked by some networks; the card must degrade to a
-  placeholder while keeping a working YouTube link.
+- Thumbnails fall back through `maxresdefault → … → mqdefault`; a 404 in the console
+  for the first candidate is normal.
+- The viewer is read-only: no ticking, tagging or file writing.
+- 390 px is verified with Puppeteer-driven emulation (Chrome headless clamps
+  `--window-size` to 500 CSS px, so use `puppeteer-core` for narrow checks).
+- `style-src` allows `'unsafe-inline'` because progress bars set widths inline.
+  Scripts remain `'self'` only; there is no user-controlled CSS.
 
 ## Continuity
 
 - Repo: <https://github.com/somphol/tubeshelf-web-ro> (public, Pages from `main`).
-- Target URL: <https://somphol.github.io/tubeshelf-web-ro/> — Pages is not enabled
-  yet; enable it after `index.html` exists.
+- Live: <https://somphol.github.io/tubeshelf-web-ro/> (Pages from `main` / root).
+- Local check: `python3 -m http.server 8765` then `?demo=1`.
 - The writer of the format (the Mac app) is private and not required to implement
   this plan.
