@@ -7,6 +7,8 @@ The file you choose is parsed in your browser. It is never uploaded, and reloadi
 the page forgets it.
 
 - Live: <https://somphol.github.io/tubeshelf-web-ro/>
+- Need to edit a backup? Use the companion app:
+  <https://somphol.github.io/tubeshelf-web-rw/> (phase 1).
 - Spec: [PLAN.md](PLAN.md)
 - Handoff: [AGENTS.md](AGENTS.md)
 - Format: [format.schema.json](format.schema.json)
